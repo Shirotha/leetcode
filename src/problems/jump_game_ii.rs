@@ -10,7 +10,7 @@
 
     Constraints:
 
-    1 <= nums.length <= 104
+    1 <= nums.length <= 10^4
     0 <= nums[i] <= 1000
     It's guaranteed that you can reach nums[n - 1].
  */

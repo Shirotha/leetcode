@@ -7,8 +7,8 @@
 
     Constraints:
 
-    1 <= prices.length <= 3 * 104
-    0 <= prices[i] <= 104
+    1 <= prices.length <= 3 * 10^4
+    0 <= prices[i] <= 10^4
  */
 
 pub struct Solution;

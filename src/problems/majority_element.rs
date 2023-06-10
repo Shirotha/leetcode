@@ -6,8 +6,8 @@
     Constraints:
 
     n == nums.length
-    1 <= n <= 5 * 104
-    -109 <= nums[i] <= 109
+    1 <= n <= 5 * 10^4
+    -10^9 <= nums[i] <= 10^9
  */
 
 pub struct Solution;
