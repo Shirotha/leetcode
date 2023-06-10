@@ -1,0 +1,50 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Template: Create Problem (Flat)",
+            "type": "shell",
+            "command": "./template.sh create ${input:problemName}",
+            "problemMatcher": []
+        }, {
+            "label": "Template: Create Problem (Nested)",
+            "type": "shell",
+            "command": "./template.sh create ${input:problemName} ${input:alternativesList}",
+            "problemMatcher": []
+        }, {
+            "label": "Template: Migrate Problem",
+            "type": "shell",
+            "command": "./template.sh migrate ${input:migratableProblem}",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "problemName",
+            "description": "name of the leetcode problem (has to be valid rust identifier)",
+            "type": "promptString"
+        }, {
+            "id": "alternativesList",
+            "description": "space seperated list of problem alternatives names (items have to be valid rust identifiers)",
+            "type": "promptString"
+        }, {
+            "id": "migratableProblem",
+            "type": "command",
+            "command": "extension.commandvariable.file.pickFile",
+            "args": {
+                "description": "file to be migrated",
+                "include": "*.rs",
+                "exclude": "**/mod.rs",
+                "fromFolder": {
+                    "fixed": "${workspaceFolder}/src/problems"
+                },
+                "transform": {
+                    "text": "${fileBasenameNoExtension}"
+                },
+                "display": "fileName"
+            }
+        }
+    ]
+}
