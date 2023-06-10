@@ -14,8 +14,8 @@
     There will be at least one element in the data structure when getRandom is called.
  */
 
-use std::collections::HashMap;
-use rand::{thread_rng, Rng};
+use std::collections::{HashMap, hash_map::Entry};
+use rand::{thread_rng, seq::SliceRandom};
 
 struct RandomizedSet {
     lookup: HashMap<i32, usize>,
@@ -29,26 +29,26 @@ impl RandomizedSet {
     }
 
     fn insert(&mut self, val: i32) -> bool {
-        if self.lookup.insert(val, self.items.len()).is_none() {
+        if let Entry::Vacant(e) = self.lookup.entry(val) {
+            e.insert(self.items.len());
             self.items.push(val);
-            true
-        } else {
-            false
+            return true;
         }
+        false
     }
     
     fn remove(&mut self, val: i32) -> bool {
         if let Some(i) = self.lookup.remove(&val) {
-            self.items.remove(i);
-            true
-        } else {
-            false
+            self.items.swap_remove(i);
+            if i == self.items.len() { return true; }
+            self.lookup.insert(self.items[i], i);
+            return true;
         }
+        false
     }
     
     fn get_random(&self) -> i32 {
-        let i = thread_rng().gen_range(0, self.items.len());
-        self.items[i]
+        *self.items.choose(&mut thread_rng()).unwrap()
     }
 }
 
@@ -57,6 +57,7 @@ mod test {
     use super::*;
 
     fn judge_random(set: &RandomizedSet, values: &Vec<i32>, n: usize) {
+        assert_eq!(&set.items, values);
         let mut counts: HashMap<i32, usize> = HashMap::with_capacity(values.len());
         for _ in 0..n {
             let x = set.get_random();
