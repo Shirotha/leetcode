@@ -14,3 +14,4 @@ mod insert_delete_getrandom_o1_duplicates_allowed;
 mod product_of_array_except_self;
 mod gas_station;
 mod candy;
+mod trapping_rain_water;
