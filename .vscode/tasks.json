@@ -6,17 +6,17 @@
         {
             "label": "Template: Create Problem (Flat)",
             "type": "shell",
-            "command": "./template.sh create ${input:problemName}",
+            "command": "bash ./template.sh create ${input:problemName}",
             "problemMatcher": []
         }, {
             "label": "Template: Create Problem (Nested)",
             "type": "shell",
-            "command": "./template.sh create ${input:problemName} ${input:alternativesList}",
+            "command": "bash ./template.sh create ${input:problemName} ${input:alternativesList}",
             "problemMatcher": []
         }, {
             "label": "Template: Migrate Problem",
             "type": "shell",
-            "command": "./template.sh migrate ${input:migratableProblem}",
+            "command": "bash ./template.sh migrate ${input:migratableProblem}",
             "problemMatcher": []
         }
     ],
