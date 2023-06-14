@@ -20,3 +20,4 @@ mod integer_to_roman;
 mod length_of_last_word;
 mod longest_common_prefix;
 mod reverse_words_in_a_string;
+mod zigzag_conversion;
