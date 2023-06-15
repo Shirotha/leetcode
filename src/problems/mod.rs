@@ -22,3 +22,4 @@ mod longest_common_prefix;
 mod reverse_words_in_a_string;
 mod zigzag_conversion;
 mod find_the_index_of_the_first_occurrence_in_a_string;
+mod text_justification;
