@@ -24,3 +24,4 @@ mod zigzag_conversion;
 mod find_the_index_of_the_first_occurrence_in_a_string;
 mod text_justification;
 mod valid_palindrome;
+mod is_subsequence;
