@@ -28,3 +28,4 @@ mod is_subsequence;
 mod two_sum_ii_input_array_is_sorted;
 mod container_with_most_water;
 mod three_sum;
+mod minimum_size_subarray_sum;
