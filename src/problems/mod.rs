@@ -35,3 +35,4 @@ mod minimum_window_substring;
 mod valid_sudoku;
 mod spiral_matrix;
 mod rotate_image;
+mod set_matrix_zeros;
