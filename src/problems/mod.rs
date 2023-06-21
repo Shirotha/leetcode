@@ -33,3 +33,4 @@ mod longest_substring_without_repeating_characters;
 mod substring_with_concatenation_of_all_words;
 mod minimum_window_substring;
 mod valid_sudoku;
+mod spiral_matrix;
