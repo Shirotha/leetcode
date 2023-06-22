@@ -36,3 +36,4 @@ mod valid_sudoku;
 mod spiral_matrix;
 mod rotate_image;
 mod set_matrix_zeros;
+mod game_of_life;
