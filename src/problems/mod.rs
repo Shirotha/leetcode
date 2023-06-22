@@ -39,3 +39,4 @@ mod set_matrix_zeros;
 mod game_of_life;
 mod ransom_note;
 mod isomorphic_strings;
+mod word_pattern;
