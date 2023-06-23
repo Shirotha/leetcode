@@ -45,3 +45,4 @@ mod group_anagrams;
 mod two_sum;
 mod happy_number;
 mod contains_duplicate_ii;
+mod summary_ranges;
