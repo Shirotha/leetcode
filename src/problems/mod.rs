@@ -49,3 +49,4 @@ mod summary_ranges;
 mod merge_intervals;
 mod longest_consecutive_sequence;
 mod insert_interval;
+mod minimum_number_of_arrows_to_burst_balloons;
