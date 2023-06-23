@@ -48,3 +48,4 @@ mod contains_duplicate_ii;
 mod summary_ranges;
 mod merge_intervals;
 mod longest_consecutive_sequence;
+mod insert_interval;
