@@ -52,3 +52,4 @@ mod insert_interval;
 mod minimum_number_of_arrows_to_burst_balloons;
 mod valid_parentheses;
 mod simplify_path;
+mod min_stack;
