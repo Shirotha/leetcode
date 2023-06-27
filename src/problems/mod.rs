@@ -61,3 +61,4 @@ mod reverse_linked_list_ii;
 mod reverse_nodes_in_k_groups;
 mod remove_nth_node_from_the_end_of_list;
 mod remove_duplicates_from_sorted_list_ii;
+mod rotate_list;
