@@ -55,7 +55,11 @@ mod test {
 
         let ts = Solution::three_sum(nums);
 
-        assert_eq!(ts, vec![vec![-1,-1,2],vec![-1,0,1]]);
+        let result = vec![vec![-1,-1,2],vec![-1,0,1]];
+        assert_eq!(ts.len(), result.len());
+        for t in ts.iter() {
+            assert!(result.contains(t));
+        }
     }
 
     /*
