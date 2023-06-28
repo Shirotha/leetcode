@@ -71,6 +71,7 @@ impl Solution {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::collections::VecDeque;
 
     fn slice_to_tree(slice: &[i32], null: i32) -> Option<Rc<RefCell<TreeNode>>> {
         if slice.is_empty() { return None; }
