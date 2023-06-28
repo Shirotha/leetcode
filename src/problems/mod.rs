@@ -67,3 +67,4 @@ mod lru_cache;
 mod maximum_depth_of_binary_tree;
 mod same_tree;
 mod invert_binary_tree;
+mod symmetric_tree;
