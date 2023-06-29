@@ -68,3 +68,4 @@ mod maximum_depth_of_binary_tree;
 mod same_tree;
 mod invert_binary_tree;
 mod symmetric_tree;
+mod convert_sorted_array_to_binary_search_tree;
