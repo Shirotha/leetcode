@@ -70,3 +70,4 @@ mod invert_binary_tree;
 mod symmetric_tree;
 mod convert_sorted_array_to_binary_search_tree;
 mod construct_binary_tree_from_preorder_and_inorder_traversal;
+mod construct_binary_tree_from_inorder_and_postorder_traversal;
