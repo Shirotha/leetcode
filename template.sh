@@ -143,7 +143,11 @@ check_reserved_batch "$@"
 if [ "$command" = "create" ]; then
     create "$@"
 elif [ "$command" = "migrate" ]; then
-    migrate "$@"
+    group=$1
+    shift
+    migrate "$group" "$1"
+    shift
+    create "$group" "$@"
 else
     echo "unknown command $1" >&2
 fi
