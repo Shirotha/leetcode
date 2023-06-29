@@ -42,11 +42,11 @@ impl Iterator for DepthFirst {
         if let Some(node) = self.stack.pop_back() {
             {
                 let node = node.borrow();
-                if let Some(left) = &node.left {
-                    self.stack.push_back(left.clone());
-                }
                 if let Some(right) = &node.right {
                     self.stack.push_back(right.clone());
+                }
+                if let Some(left) = &node.left {
+                    self.stack.push_back(left.clone());
                 }
             }
             Some(node)
