@@ -40,75 +40,80 @@ use std::{
     cell::RefCell,
 };
 
-struct PathInfo {
+struct Path {
+    current: Option<Rc<RefCell<TreeNode>>>,
+    path: usize,
     open: usize,
     len: usize
 }
-
-impl PathInfo {
-    fn new() -> Self { PathInfo { open: 0, len: 0 } }
-    fn reset(&mut self) { self.open = 0; self.len = 0; }
-    fn first_one(&self) -> Option<usize> {
-        if self.open == 0 { return None; }
-        let mut n = 0;
-        let mut bits = self.open;
-        while bits % 2 == 0 { n += 1; bits >>= 1; }
-        Some(self.len - n - 1)
-    }
+impl Path {
+    fn new(root: Option<Rc<RefCell<TreeNode>>>) -> Self { Path { current: root, path: 0, open: 0, len: 0 } }
     fn push(&mut self, open: bool) {
         self.open <<= 1;
         if open { self.open |= 1; }
         self.len += 1;
     }
-}
-struct Path<'a> {
-    root: Option<Rc<RefCell<TreeNode>>>,
-    path: usize,
-    next: &'a mut PathInfo,
-}
-impl<'a> Path<'a> {
-    fn new(root: Option<Rc<RefCell<TreeNode>>>, next: &'a mut PathInfo) -> Self {
-        Path { root, path: 0, next }
-    }
-    fn try_from_last(root: Option<Rc<RefCell<TreeNode>>>, path: usize, next: &'a mut PathInfo) -> Option<Self> {
-        if let Some(n) = next.first_one() {
-            let path = (1 << n) | path & ((1 << n) - 1);
-            next.reset();
-            Some(Path { root, path, next })
-        } else {None }
+    fn reset(&mut self, root: Option<Rc<RefCell<TreeNode>>>, path: usize) -> Option<usize> {
+        if self.open == 0 { return None; }
+        let mut n = 0;
+        while self.open & 1 == 0 { n += 1; self.open >>= 1; }
+        let n = self.len - n - 1;
+        self.path = (1 << n) | path & ((1 << n) - 1);
+        self.open = 0; self.len = 0;
+        self.current = root;
+        Some(self.path)
     }
 }
-impl<'a> Iterator for Path<'a> {
+impl Iterator for Path {
     type Item = i32;
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(root) = self.root.clone() {
-            let root = root.borrow();
-            self.root = if root.left.is_some() && self.path % 2 == 0 {
-                self.next.push(root.right.is_some());
-                root.left.clone()
-            } else { 
-                self.next.push(false); 
-                root.right.clone() 
+        self.current.clone().map( |node| {
+            let node = node.borrow();
+            self.current = if node.left.is_some() && self.path & 1 == 0 {
+                self.push(node.right.is_some());
+                node.left.clone()
+            } else {
+                self.push(false);
+                node.right.clone()
             };
             self.path >>= 1;
-            Some(root.val)
-        } else { None }
+            node.val
+        } )
     }
+}
+struct Paths {
+    root: Option<Rc<RefCell<TreeNode>>>,
+    last: usize,
+    path: Path,
+}
+impl Paths {
+    fn new(root: Option<Rc<RefCell<TreeNode>>>) -> Self {
+        Paths { root: root.clone(), last: 0, path: Path::new(root) }
+    }
+    fn next(&mut self) -> bool {
+        if let Some(next) = self.path.reset(self.root.clone(), self.last) {
+            self.last = next; true
+        } else { false }
+    }
+}
+trait PathsIter {
+    fn paths(self) -> Paths;
+}
+impl PathsIter for Option<Rc<RefCell<TreeNode>>> {
+    fn paths(self) -> Paths { Paths::new(self) }
 }
 
 impl Solution {
     pub fn sum_numbers(root: Option<Rc<RefCell<TreeNode>>>) -> i32 {
-        let mut route = PathInfo::new();
-        let mut next = Some(Path::new(root.clone(), &mut route));
+        let mut iter = root.paths();
         let mut sum = 0;
-        while let Some(path) = next {
-            let last = path.path;
+        loop {
             let mut num = 0;
-            for val in path {
+            for val in &mut iter.path {
                 num = 10 * num + val;
             }
             sum += num;
-            next = Path::try_from_last(root.clone(), last, &mut route);
+            if !iter.next() { break; }
         }
         sum
     }
@@ -185,5 +190,18 @@ mod test {
         let s = Solution::sum_numbers(root);
 
         assert_eq!(s, 1026);
+    }
+
+    /*
+        Input: root = [9,0,3,null,null,2,null,3,4,null,null,null,7]
+        Output: 102660
+    */
+    #[test]
+    fn example3() {
+        let root = slice_to_tree(&[9,0,3,-1,-1,2,-1,3,4,-1,-1,-1,7], -1);
+
+        let s = Solution::sum_numbers(root);
+
+        assert_eq!(s, 102660);
     }
 }
