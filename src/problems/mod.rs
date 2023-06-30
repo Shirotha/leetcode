@@ -72,3 +72,4 @@ mod convert_sorted_array_to_binary_search_tree;
 mod construct_binary_tree_from_preorder_and_inorder_traversal;
 mod construct_binary_tree_from_inorder_and_postorder_traversal;
 mod flatten_binary_tree_to_linked_list;
+mod path_sum;
