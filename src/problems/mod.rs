@@ -74,3 +74,4 @@ mod construct_binary_tree_from_inorder_and_postorder_traversal;
 mod flatten_binary_tree_to_linked_list;
 mod path_sum;
 mod sum_root_to_leaf_numbers;
+mod binary_tree_maximum_path_sum;
