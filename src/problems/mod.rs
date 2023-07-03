@@ -81,3 +81,4 @@ mod lowest_common_ancestor_of_a_binary_tree;
 mod binary_tree_right_side_view;
 mod average_of_levels_in_binary_tree;
 mod binary_tree_level_order_traversal;
+mod binary_tree_zigzag_level_order_traversal;
