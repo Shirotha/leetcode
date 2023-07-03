@@ -45,8 +45,8 @@ impl Solution {
                 let node = queue.pop_front().unwrap();
                 let node = node.borrow();
                 sum += node.val as f64;
-                if let Some(left) = node.right.clone() { queue.push_back(left); }
-                if let Some(right) = node.left.clone() { queue.push_back(right); }
+                if let Some(left) = node.left.clone() { queue.push_back(left); }
+                if let Some(right) = node.right.clone() { queue.push_back(right); }
             }
             average.push(sum / n as f64);
         }
