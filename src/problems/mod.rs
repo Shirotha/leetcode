@@ -77,3 +77,4 @@ mod sum_root_to_leaf_numbers;
 mod binary_tree_maximum_path_sum;
 mod binary_search_tree_iterator;
 mod count_complete_tree_nodes;
+mod lowest_common_ancestor_of_a_binary_tree;
