@@ -79,3 +79,4 @@ mod binary_search_tree_iterator;
 mod count_complete_tree_nodes;
 mod lowest_common_ancestor_of_a_binary_tree;
 mod binary_tree_right_side_view;
+mod average_of_levels_in_binary_tree;
