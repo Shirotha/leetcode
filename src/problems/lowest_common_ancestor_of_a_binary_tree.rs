@@ -45,7 +45,7 @@ impl Solution {
         let mut stack = VecDeque::new();
         let mut ancestor = None;
         let mut d = 0;
-        while !stack.is_empty() || root.is_some() {
+        loop {
             while let Some(node) = root.take() {
                 root = node.borrow().left.clone();
                 stack.push_back(node);
@@ -67,7 +67,6 @@ impl Solution {
             }
             root = node.borrow().right.clone();
         }
-        todo!()
     }
 }
 
