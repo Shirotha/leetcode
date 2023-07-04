@@ -83,3 +83,4 @@ mod average_of_levels_in_binary_tree;
 mod binary_tree_level_order_traversal;
 mod binary_tree_zigzag_level_order_traversal;
 mod minimum_absolute_difference_in_bst;
+mod kth_smallest_element_in_a_bst;
