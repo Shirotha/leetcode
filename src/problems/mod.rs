@@ -82,3 +82,4 @@ mod binary_tree_right_side_view;
 mod average_of_levels_in_binary_tree;
 mod binary_tree_level_order_traversal;
 mod binary_tree_zigzag_level_order_traversal;
+mod minimum_absolute_difference_in_bst;
