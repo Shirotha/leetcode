@@ -18,6 +18,11 @@
             "type": "shell",
             "command": "bash ./template.sh migrate ${input:migratableProblem} ${input:alternativesList}",
             "problemMatcher": []
+        }, {
+            "label": "Template: Add Alternatives",
+            "type": "shell",
+            "command": "bash ./template.sh create ${input:nestedProblem} ${input:alternativesList}",
+            "problemMatcher": []
         }
     ],
     "inputs": [
@@ -44,6 +49,22 @@
                     "text": "${fileBasenameNoExtension}"
                 },
                 "display": "fileName"
+            }
+        }, {
+            "id": "nestedProblem",
+            "type": "command",
+            "command": "extension.commandvariable.file.pickFile",
+            "args": {
+                "description": "nested problem folder",
+                "include": "*/mod.rs",
+                "fromFolder": {
+                    "fixed": "${workspaceFolder}/src/problems"
+                },
+                "transform": {
+                    "text": "${fileDirname}",
+                    "find": "^.*${pathSeparator}([^${pathSeparator}]+)$",
+                    "replace": "$1"
+                }
             }
         }
     ]
