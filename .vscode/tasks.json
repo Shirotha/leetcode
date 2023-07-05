@@ -16,7 +16,7 @@
         }, {
             "label": "Template: Migrate Problem",
             "type": "shell",
-            "command": "bash ./template.sh migrate ${input:migratableProblem}",
+            "command": "bash ./template.sh migrate ${input:migratableProblem} ${input:alternativesList}",
             "problemMatcher": []
         }
     ],
