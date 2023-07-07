@@ -1,5 +1,5 @@
 mod scanline;
 mod floodfill;
-mod disjoint_set;
+mod union;
 mod partition;
-mod disjoint_set_alt;
+mod union_alt;
