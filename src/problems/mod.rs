@@ -87,3 +87,4 @@ mod kth_smallest_element_in_a_bst;
 mod validate_binary_search_tree;
 mod number_of_islands;
 mod surrounded_regions;
+mod palindrome_partitioning;
