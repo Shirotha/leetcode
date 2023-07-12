@@ -88,3 +88,4 @@ mod validate_binary_search_tree;
 mod number_of_islands;
 mod surrounded_regions;
 mod palindrome_partitioning;
+mod evaluate_division;
