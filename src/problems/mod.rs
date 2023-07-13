@@ -93,3 +93,4 @@ mod course_schedule;
 mod course_schedule_ii;
 mod snakes_and_ladders;
 mod minimum_genetic_mutation;
+mod word_ladder;
