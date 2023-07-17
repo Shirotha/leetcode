@@ -95,3 +95,4 @@ mod snakes_and_ladders;
 mod minimum_genetic_mutation;
 mod word_ladder;
 mod implement_trie_prefix_tree;
+mod design_add_and_search_words_data_structure;
