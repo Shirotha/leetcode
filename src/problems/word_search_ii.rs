@@ -17,8 +17,6 @@
 
 pub struct Solution;
 
-const WORD_LENGTH: usize = 10;
-
 #[inline] fn char_to_index(c: char) -> u32 { c as u32 - 0x61 }
 #[inline] fn index_to_char(i: u8) -> char { (i + 0x61) as char }
 
@@ -49,8 +47,9 @@ impl Bit {
     #[inline] fn set_bit<const O: u32, const M: usize>(this: &mut usize, _field: BitField<O, M>, bit: u32) {
         *this |= 1 << (O + bit);
     }
-    #[inline] fn index<const O: u32, const M: usize>(this: usize, _field: BitField<O, M>, bit: u32) -> u32 {
-        ((this >> O) & ((1 << bit) - 1)).count_ones()
+    #[inline] fn index<const O: u32, const M: usize>(this: usize, _field: BitField<O, M>, bit: u32) -> Result<u32,u32> {
+        let index = ((this >> O) & ((1 << bit) - 1)).count_ones();
+        if Self::is_set(this, _field, bit) { Ok(index) } else { Err(index) }
     }
     #[inline] fn count<const O: u32, const M: usize>(this: usize, _field: BitField<O, M>) -> u32 {
         ((this & M) >> O).count_ones()
@@ -58,8 +57,11 @@ impl Bit {
     #[inline] fn first<const O: u32, const M: usize>(this: usize, _field: BitField<O, M>) -> u32 {
         (this >> O).trailing_zeros()
     }
-    #[inline] fn next<const O: u32, const M: usize>(this: usize, _field: BitField<O, M>, current: u32) -> u32 {
-        (this >> (O + current)).trailing_zeros()
+    #[inline] fn next<const O: u32, const M: usize>(this: usize, _field: BitField<O, M>, current: u32) -> Option<u32> {
+        let remaining = this >> (O + current + 1);
+        if remaining != 0 {
+            Some(current + 1 + (this >> (O + current + 1)).trailing_zeros())
+        } else { None }
     }
 }
 struct Head;
@@ -73,7 +75,8 @@ impl Tail {
     const POINTER:    BitField<0,  0x7fffffffffffffff> = BitField{};
     const CONTRACTED: BitField<63, 0x8000000000000000> = BitField{};
     fn contraction(knot: usize) -> usize {
-        Bit::from(Self::POINTER, knot) | Bit::from(Self::CONTRACTED, 1)
+        Bit::from(Self::POINTER, knot)
+            | Bit::from(Self::CONTRACTED, 1)
     }
 }
 struct ContractState;
@@ -85,6 +88,16 @@ impl ContractState {
         Bit::from(Self::NODE, node) 
             | Bit::from(Self::BRIDGE, bridge)
             | Bit::from(Self::CHAR, char)
+    }
+}
+struct GridState;
+impl GridState {
+    const NODE:   BitField<0,  0x001fffffffffffff> = BitField{};
+    const POS: BitField<53, 0x1fe0000000000000> = BitField{};
+    const DIR:    BitField<61, 0xe000000000000000> = BitField{};
+    fn from(node: usize, ij: usize) -> usize {
+        Bit::from(Self::NODE, node)
+            | Bit::from(Self::POS, ij)
     }
 }
 
@@ -112,7 +125,7 @@ impl<T> PathIter<T> {
         stack.push_back(root);
         PathIter { stack }
     }
-    fn next<P, R>(&mut self, peek: P) -> Result<Option<R>,()> where 
+    fn forward<P, R>(&mut self, peek: P) -> Result<Option<R>,()> where 
         P: FnOnce(&mut T) -> PeekResult<T, R>
     {
         if let Some(state) = self.stack.back_mut() {
@@ -125,14 +138,38 @@ impl<T> PathIter<T> {
             Ok(result)
         } else { Err(()) }
     }
+    fn push_backwards_root<R>(&mut self, root: R) where
+        R: FnOnce(&T) -> T
+    {
+        let root = root(self.stack.front().unwrap());
+        self.stack.push_front(root);
+    }
+    fn backwards<P>(&mut self, peek: P) -> Option<bool> where
+        P: FnOnce(&mut T) -> PeekResult<T, bool>
+    {
+        if let Some(state) = self.stack.front_mut() {
+            let PeekResult(action, result) = peek(state);
+            if result.is_some() { return result; }
+            match action {
+                Push(next) => self.stack.push_front(next),
+                Next => (),
+                Pop => { self.stack.pop_front(); }
+            }
+            None
+        } else { Some(false) }
+    }
+    fn pop_front_until<P>(&mut self, predicate: P) where
+        P: Fn(&T) -> bool
+    {
+        while let Some(state) = self.stack.pop_front() {
+            if predicate(&state) { return }
+        }
+    }
+    fn reset(&mut self, root: T) {
+        self.stack.clear();
+        self.stack.push_back(root);
+    }
 }
-
-/* TODO: implement PathIter with backtracking
- * - assumed to start in the middle (at a knot)
- * - iterate like normal until possible result is found
- * - use front of stack to backtrack (confirm result)
- * - iterate rest (treat all results as confirmed)
-*/
 
 struct Knot {
     node: usize,
@@ -148,7 +185,7 @@ enum Edge {
     Regular(usize),
     Contraction(usize),
 }
-use std::collections::VecDeque;
+use std::collections::{VecDeque, HashSet};
 
 use Edge::*;
 impl Edge {
@@ -182,16 +219,18 @@ impl Trie {
             self.free[size - 1] = node;
         }
     }
-    #[inline] fn is_terminus(&self, node: usize) -> bool { !Bit::is_zero(self.data[node], Head::TERMINUS) }
-    #[inline] fn pointer(&self, node: usize, index: u32) -> usize {
-        let index = Bit::index(self.data[node], Head::CHILDREN, index);
-        node + 1 + index as usize
+    #[inline] fn is_terminus(&self, node: usize) -> bool { 
+        !Bit::is_zero(self.data[node], Head::TERMINUS)
     }
-    #[inline] fn pointer_iter(&self, node: usize, current: u32) -> (usize, u32) {
+    #[inline] fn pointer(&self, node: usize, index: u32) -> Result<usize,usize> {
+        Bit::index(self.data[node], Head::CHILDREN, index)
+            .map( |index| node + 1 + index as usize )
+            .map_err( |index| node + 1 + index as usize )
+    }
+    #[inline] fn pointer_iter(&self, node: usize, current: u32) -> Option<(usize, Option<u32>)> {
         let head = self.data[node];
-        let index = Bit::index(head, Head::CHILDREN, current);
-        let next = Bit::next(head, Head::CHILDREN, current);
-        (node + 1 + index as usize, next)
+        self.pointer(node, current).ok()
+            .map( |index| (index, Bit::next(head, Head::CHILDREN, current)) )
     }
 
     #[inline] fn widen(&mut self, node: usize, size: usize, child_ptr: usize) -> (usize, usize) {
@@ -205,23 +244,23 @@ impl Trie {
         (new_node, new_child_ptr)
     }
     #[inline] fn relink(&mut self, node: usize, chr: char, child: usize) {
-        let index = Bit::index(self.data[node], Head::CHILDREN, char_to_index(chr));
-        let child_ptr = node + 1 + index as usize;
+        let child_ptr = self.pointer(node, char_to_index(chr)).unwrap();
         self.data[child_ptr] = child;
     }
     #[inline] fn get_or_add(&mut self, node: usize, chr: char) -> (usize, usize) {
         let head = self.data[node];
         let bit = char_to_index(chr);
-        let index = Bit::index(head, Head::CHILDREN, bit);
-        let child_ptr = node + 1 + index as usize;
-        if Bit::is_set(head, Head::CHILDREN, bit) {
-            let size = Bit::count(head, Head::CHILDREN) as usize + 1;
-            let (node, child_ptr) = self.widen(node, size, child_ptr);
-            Bit::set_bit(&mut self.data[node], Head::CHILDREN, bit);
-            let child = self.alloc(1);
-            self.data[child_ptr] = child;
-            (node, child)
-        } else { (node, self.data[child_ptr]) }
+        match self.pointer(node, bit) {
+            Err(child_ptr) => {
+                let size = Bit::count(head, Head::CHILDREN) as usize + 1;
+                let (node, child_ptr) = self.widen(node, size, child_ptr);
+                Bit::set_bit(&mut self.data[node], Head::CHILDREN, bit);
+                let child = self.alloc(1);
+                self.data[child_ptr] = child;
+                (node, child)
+            },
+            Ok(child_ptr) => (node, self.data[child_ptr])
+        }
     }
     #[inline] fn set_terminus(&mut self, node: usize) {
         Bit::set_unchecked(&mut self.data[node], Head::TERMINUS, 1);
@@ -276,7 +315,7 @@ impl Trie {
             PathIter::new(state)
         };
         let mut prefix = String::new();
-        while let Ok(path) = iter.next( |state| {
+        while let Ok(path) = iter.forward( |state| {
             let i = Bit::get(*state, ContractState::CHAR) as u32;
             if i >= 26 {
                 let len = Bit::get(*state, ContractState::BRIDGE);
@@ -284,17 +323,17 @@ impl Trie {
                 return PeekResult::skip(Pop);
             }
             let node = Bit::get(*state, ContractState::NODE);
-            let (child_ptr, j) = self.pointer_iter(node, i);
-            Bit::set(state, ContractState::CHAR, j as usize);
+            let (child_ptr, j) = self.pointer_iter(node, i).unwrap();
+            Bit::set(state, ContractState::CHAR, j.unwrap_or(26) as usize);
             let child = self.data[child_ptr];
             let (knot, len) = self.traverse_line(child);
             if let Some(knot) = knot {
                 prefix.push(index_to_char(i as u8));
                 let value = self.create_bridge(&mut prefix, child, knot);
-                let action = Push(ContractState::from(knot, len as usize, 0));
+                let first = Bit::first(self.data[knot], Head::CHILDREN);
+                let action = Push(ContractState::from(knot, len as usize, first as usize));
                 if len >= min_length {
                     knot_index += 1;
-                    result.push(Knot { node: knot, value, prefix: prefix.clone() });
                     Bit::set(&mut self.data[knot], Head::KNOT, knot_index);
                     self.data[child_ptr] = Tail::contraction(knot_index);
                     PeekResult::found(action, (knot, value))
@@ -331,9 +370,10 @@ impl Trie {
         self.data.copy_within((child_ptr+1)..=last, child_ptr);
     }
     #[inline] fn get(&self, node: usize, chr: char) -> Option<Edge> {
-        let child_ptr = self.pointer(node, char_to_index(chr));
-        let child = self.data[child_ptr];
-        if child == NULL { None } else { Some(Edge::new(child)) }
+        if let Ok(child_ptr) = self.pointer(node, char_to_index(chr)) {
+            let child = self.data[child_ptr];
+            if child == NULL { None } else { Some(Edge::new(child)) }
+        } else { None }
     }
     #[inline] fn is_leaf(&self, node: usize) -> bool {
         Bit::is_zero(self.data[node], Head::CHILDREN)
@@ -353,29 +393,83 @@ impl Trie {
     }
 }
 
-// TODO: v use new types for everything v
-
-const PARENT_OFFSET: u32 = usize::BITS - 10;
-const PARENT: usize = 0xff << PARENT_OFFSET;
-const DIR_OFFSET: u32 = usize::BITS - 3;
-const DIR: usize = 0x7 << DIR_OFFSET;
-const NODE: usize = usize::MAX >> 11;
 #[inline] fn get_neighbour(board: &[Vec<char>], ij: usize, dir: usize, w: usize) -> Option<(usize, char)> {
     let i = ij / w;
     let j = ij % w;
     match dir {
-        0 => if j > 0 { board.get(i).and_then( |row| row.get(j - 1) ).map( |c| (ij - 1, *c) ) } else { None },
-        1 => if i > 0 { board.get(i - 1).and_then( |row| row.get(j) ).map( |c| (ij - w, *c) ) } else { None },
-        2 => board.get(i).and_then( |row| row.get(j + 1) ).map( |c| (ij + 1, *c) ),
-        3 => board.get(i + 1).and_then( |row| row.get(j) ).map( |c| (ij + w, *c) ),
+        0 => if j > 0 { board.get(i)
+            .and_then( |row| row.get(j - 1) )
+            .map( |c| (ij - 1, *c) ) } else { None },
+        1 => if i > 0 { board.get(i - 1)
+            .and_then( |row| row.get(j) )
+            .map( |c| (ij - w, *c) ) } else { None },
+        2 => board.get(i)
+            .and_then( |row| row.get(j + 1) )
+            .map( |c| (ij + 1, *c) ),
+        3 => board.get(i + 1)
+            .and_then( |row| row.get(j) )
+            .map( |c| (ij + w, *c) ),
         _ => panic!("invalid direction")
     }
 }
-enum State {
-    Explore,
-    Confirm(usize),
+#[inline] fn first_node(trie: &mut Trie, chr: char, knot: &Knot) -> Option<(usize, bool)> {
+    if knot.node == trie.root {
+        match trie.get(knot.node, chr) {
+            Some(Regular(node)) => Some((node, true)),
+            Some(Contraction(node)) => {
+                trie.remove(knot.node, node);
+                None
+            },
+            _ => None,
+        }
+    } else if chr != knot.value { None }
+    else { Some((knot.node, false)) }
 }
-use State::*;
+fn confirm(board: &[Vec<char>], iter: &mut PathIter<usize>, closed: &mut HashSet<usize>, knot: &Knot) -> bool {
+    let w = board[0].len();
+    let prefix = knot.prefix.as_bytes();
+    let mut index = prefix.len() - 1;
+    iter.push_backwards_root( |root| {
+        let mut root = *root;
+        Bit::clear(&mut root, GridState::DIR);
+        root
+    } );
+    loop {
+        if let Some(result) = iter.backwards( |state| {
+            let dir = Bit::get(*state, GridState::DIR);
+            let ij = Bit::get(*state, GridState::POS);
+            if dir >= 4 { 
+                index += 1;
+                return if index == prefix.len() {
+                    PeekResult::found(Pop, false)
+                } else {
+                    closed.remove(&ij);
+                    PeekResult::skip(Pop)
+                };
+            }
+            Bit::set(state, GridState::DIR, dir + 1);
+            if let Some((next_ij, chr)) = get_neighbour(board, ij, dir, w) {
+                if closed.contains(&next_ij) { return PeekResult::skip(Next); }
+                if prefix[index] == chr as u8 {
+                    closed.insert(next_ij);
+                    return if index == 0 {
+                        PeekResult::found(Next, true)
+                    } else {
+                        index -= 1;
+                        PeekResult::skip(Push(Bit::from(GridState::POS, next_ij)))
+                    }
+                }
+            }
+            PeekResult::skip(Next)
+        } ) {
+            return if result {
+                iter.pop_front_until( |state| Bit::get(*state, GridState::NODE) == knot.node );
+                true
+            } else { false };
+        }
+    }
+}
+
 impl Solution {
     pub fn find_words(board: Vec<Vec<char>>, words: Vec<String>) -> Vec<String> {
         let h = board.len();
@@ -385,132 +479,83 @@ impl Solution {
         let mut trie = Trie::new();
         for word in words { trie.insert(word); }
         let knots = trie.contract(2);
-        let mut stack = vec![0; w * h];
-        let mut state = Explore;
-        for knot in knots.iter().rev() {
-            let prefix = knot.prefix.as_bytes();
+        let mut iter = PathIter::new(0);
+        let mut closed = HashSet::new();
+        'knot: for knot in knots.iter().rev() {
             for root_y in 0..h { for root_x in 0..w {
                 let root_chr = board[root_y][root_x];
-                let mut node = knot.node;
-                let mut confirmed = node == trie.root;
-                if confirmed {
-                    match trie.get(node, root_chr) {
-                        Some(Regular(knot)) => node = knot,
-                        Some(Contraction(knot)) => {
-                            trie.remove(node, knot);
-                            continue;
-                        },
-                        _ => continue,
-                    }
-                } else if root_chr != knot.value { continue; }
+                let (node, mut confirmed) = if let Some(first) = first_node(&mut trie, root_chr, knot) {
+                    first
+                } else { continue; };
                 builder.clear();
                 builder.push(root_chr);
                 let root = root_y * w + root_x;
-                let mut ij = root;
-                stack[ij] = node;
-                loop {
-                     // FIXME: example6: OOB
-                    let s: usize = stack[ij];
-                    let dir = match &mut state {
-                        Confirm(terminus) if ij == knot.node => {
-                            let dir = (*terminus & DIR) >> DIR_OFFSET;
-                            *terminus ^= ((dir + 1) ^ dir) << DIR_OFFSET;
-                            dir
-                        },
-                        _ => {
-                            let dir = (s & DIR) >> DIR_OFFSET;
-                            stack[ij] ^= ((dir + 1) ^ dir) << DIR_OFFSET;
-                            dir
-                        },
-                    };
-                    if dir >= 4 {
-                        stack[ij] = 0;
-                        match state {
-                            Explore => {
-                                if ij == root { break; }
-                                ij = (s & PARENT) >> PARENT_OFFSET;
-                                let parent = stack[ij] & NODE;
-                                if trie.is_leaf(node) { trie.remove(parent, node); }
-                                node = parent;
-                                builder.pop();
-                            },
-                            Confirm(_) => {
-                                if ij == knot.node {
-                                    ij = s & NODE;
-                                    loop {
-                                        let s = stack[ij];
-                                        stack[ij] = 0;
-                                        if ij == root { break; }
-                                        ij = s & NODE;
-                                    }
-                                    break;
-                                }
-                                ij = s % NODE;
-                                node += 1;
-                            }
+                iter.reset(GridState::from(node, root));
+                closed.clear();
+                closed.insert(root);
+                if trie.is_terminus(node) {
+                    if confirmed {
+                        trie.clear_terminus(node);
+                        result.push(builder.clone());
+                        if trie.is_leaf(node) {
+                            trie.remove(knot.node, node);
+                            continue;
                         }
-                        continue;
+                    } else if confirm(&board, &mut iter, &mut closed, knot) {
+                        trie.clear_terminus(node);
+                        result.push(knot.prefix.clone() + &builder);
+                        if trie.is_leaf(node) { continue 'knot; }
+                        confirmed = true;
                     }
+                }
+                while let Ok(path) = iter.forward( |state| {
+                    let ij = Bit::get(*state, GridState::POS);
+                    let dir = Bit::get(*state, GridState::DIR);
+                    if dir >= 4 {
+                        builder.pop();
+                        closed.remove(&ij);
+                        return PeekResult::skip(Pop);
+                    }
+                    Bit::set(state, GridState::DIR, dir + 1);
                     if let Some((next_ij, chr)) = get_neighbour(&board, ij, dir, w) {
-                        if stack[next_ij] != 0 { continue; }
-                        match state {
-                            Explore => {
-                                match trie.get(node, chr) {
-                                    Some(Regular(next_node)) => {
-                                        builder.push(chr);
-                                        let s = ij << PARENT_OFFSET | next_node & NODE;
-                                        if trie.is_terminus(next_node) {
-                                            if confirmed {
-                                                if trie.clear_terminus(next_node) { result.push(builder.clone()); }
-                                                if trie.is_leaf(next_node) { 
-                                                    trie.remove(node, next_node);
-                                                    builder.pop();
-                                                    continue;
-                                                }
-                                            } else {
-                                                state = Confirm(next_node | (next_ij << PARENT_OFFSET));
-                                                if trie.is_leaf(next_node) {
-                                                    stack[next_ij] = s & (4 << DIR_OFFSET);
-                                                } else {
-                                                    stack[next_ij] = s;
-                                                }
-                                                ij = root; node = prefix.len() - 1;
-                                                continue;
-                                            }
-                                        }
-                                        stack[next_ij] = s;
-                                        ij = next_ij; node = next_node;
-                                    },
-                                    Some(Contraction(next_node)) => {
-                                        trie.remove(node, next_node);
-                                    },
-                                    None => (),
+                        if closed.contains(&next_ij) { return PeekResult::skip(Next); }
+                        let node = Bit::get(*state, GridState::NODE);
+                        match trie.get(node, chr) {
+                            Some(Regular(next_node)) => {
+                                let terminus = trie.is_terminus(next_node);
+                                let leaf = trie.is_leaf(next_node);
+                                if terminus || !leaf {
+                                    builder.push(chr);
+                                    closed.insert(next_ij);
                                 }
+                                let action = if leaf { Next } 
+                                    else { Push(GridState::from(next_node, next_ij)) };
+                                return if terminus {
+                                    PeekResult::found(action, (next_node, next_ij))
+                                } else {
+                                    PeekResult::skip(action)
+                                };
                             },
-                            Confirm(terminus) => {
-                                if chr as u8 == prefix[node] {
-                                    if node == 0 {
-                                        while ij != root {
-                                            let s = stack[ij];
-                                            stack[ij] = 0;
-                                            ij = s & NODE;
-                                        }
-                                        confirmed = true;
-                                        state = Explore;
-                                        ij = (terminus & PARENT) >> PARENT_OFFSET;
-                                        // FIXME: stack at ij is 0
-                                        node = terminus & NODE;
-                                        if trie.clear_terminus(node) {
-                                            let total = knot.prefix.clone() + &builder;
-                                            result.push(total); 
-                                        }
-                                    } else { 
-                                        node -= 1; 
-                                        stack[next_ij] = ij;
-                                        ij = next_ij;
-                                    }
-                                }
-                            }
+                            Some(Contraction(next_node)) => {
+                                trie.remove(node, next_node);
+                            },
+                            None => ()
+                        }
+                    }
+                    PeekResult::skip(Next)
+                } ) {
+                    if let Some((terminus, ij)) = path {
+                        if !confirmed { 
+                            if confirm(&board, &mut iter, &mut closed, knot) {
+                                confirmed = true;
+                            } else { break; }
+                        }
+                        trie.clear_terminus(terminus);
+                        let word = knot.prefix.clone() + &builder;
+                        result.push(word); 
+                        if trie.is_leaf(terminus) {
+                            builder.pop();
+                            closed.remove(&ij);
                         }
                     }
                 }
@@ -642,7 +687,50 @@ mod test {
         .into_iter().map(str::to_string).collect();
 
         let ws = Solution::find_words(board, words);
-
+        // FIXME: actually use correct result
         judge(ws, &["oath","oathk","oathf","oathfi","oathfii","oathi","oathii","oate","eat"]);
+    }
+
+    #[test]
+    fn example7() {
+        let board = vec![
+            vec!['b'],
+            vec!['a'],
+            vec!['b'],
+            vec!['b'],
+            vec!['a']];
+        let words = ["baa","abba","baab","aba"]
+        .into_iter().map(str::to_string).collect();
+
+        let ws = Solution::find_words(board, words);
+
+        judge(ws, &["abba"]);
+    }
+
+    #[test]
+    fn example8() {
+        let board = vec![
+            vec!['a','b','c'],
+            vec!['a','e','d'],
+            vec!['a','f','g']];
+        let words = ["eaafgdcba","eaabcdgfa"]
+        .into_iter().map(str::to_string).collect();
+
+        let ws = Solution::find_words(board, words);
+
+        judge(ws, &["eaafgdcba","eaabcdgfa"]);
+    }
+
+    #[test]
+    fn example9() {
+        let board = vec![
+            vec!['a','a','x','x'],
+            vec!['a','a','y','y']];
+        let words = ["aaaa","aaaaa","aaaaaa","aaaaaaa","aaaaaaaa"]
+        .into_iter().map(str::to_string).collect();
+
+        let ws = Solution::find_words(board, words);
+
+        judge(ws, &["aaaa"]);
     }
 }
