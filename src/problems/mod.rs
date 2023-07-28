@@ -99,3 +99,4 @@ mod design_add_and_search_words_data_structure;
 mod word_search_ii;
 mod letter_combinations_of_a_phone_number;
 mod combinations;
+mod permutations;
