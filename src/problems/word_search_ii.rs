@@ -687,8 +687,8 @@ mod test {
         .into_iter().map(str::to_string).collect();
 
         let ws = Solution::find_words(board, words);
-        // FIXME: actually use correct result
-        judge(ws, &["oath","oathk","oathf","oathfi","oathfii","oathi","oathii","oate","eat"]);
+
+        judge(ws, &["aaaaaaaaaa", "aaaaaaaaab", "aaaaaaaaac", "aaaaaaaaad", "aaaaaaaaae", "aaaaaaaaaf", "aaaaaaaaag", "aaaaaaaaah", "aaaaaaaaai", "aaaaaaaaaj", "aaaaaaaaak", "aaaaaaaaal", "aaaaaaaaan", "aaaaaaaaao", "aaaaaaaaap", "aaaaaaaaaq", "aaaaaaaaar", "aaaaaaaaas", "aaaaaaaaat", "aaaaaaaaau", "aaaaaaaaav", "aaaaaaaaaw", "aaaaaaaaay", "aaaaaaaaaz", "aaaaaaaabc", "aaaaaaaabm", "aaaaaaaacb", "aaaaaaaacd", "aaaaaaaadc", "aaaaaaaade", "aaaaaaaaed", "aaaaaaaaef", "aaaaaaaafe", "aaaaaaaafg", "aaaaaaaagf", "aaaaaaaagh", "aaaaaaaahg", "aaaaaaaahi", "aaaaaaaaih", "aaaaaaaaij", "aaaaaaaaji", "aaaaaaaajk", "aaaaaaaakj", "aaaaaaaakl", "aaaaaaaalk", "aaaaaaaanm", "aaaaaaaano", "aaaaaaaaon", "aaaaaaaaop", "aaaaaaaapo", "aaaaaaaapq", "aaaaaaaaqp", "aaaaaaaaqr", "aaaaaaaarq", "aaaaaaaars", "aaaaaaaasr", "aaaaaaaast", "aaaaaaaats", "aaaaaaaatu", "aaaaaaaaut", "aaaaaaaauv", "aaaaaaaavu", "aaaaaaaavw", "aaaaaaaawv", "aaaaaaaawx", "aaaaaaaayx", "aaaaaaaayz", "aaaaaaaaza", "aaaaaaaazy"]);
     }
 
     #[test]
