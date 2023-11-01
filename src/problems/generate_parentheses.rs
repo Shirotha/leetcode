@@ -8,30 +8,41 @@
 
 pub struct Solution;
 
-use std::str::from_utf8_unchecked;
-
 impl Solution {
     pub fn generate_parenthesis(n: i32) -> Vec<String> {
-        if n == 1 { return vec!["()".into()]; }
+        if n == 1 { return vec!["()".to_string()]; }
         let n = n as usize;
         let l = n << 1;
-        let mut m = 1;
-        let mut str = "()".repeat((3usize.pow(n as u32) + 3) * l / 12);
-        let a = unsafe { str.as_bytes_mut() };
-        for i in 1..n {
-            let s = i << 1;
-            let o0 = m * l;
-            for o in (0..o0).step_by(l) {
-                a.copy_within(o..(o + s), o0 + o + 1);
+        let mut result = Vec::new();
+        result.push(String::with_capacity(l));
+        let mut stack = vec![(0, 0, 0, 0); l];
+        stack.push((0, 0, 0, 0u8));
+        let mut i = 0;
+        loop {
+            let (j, o, c, b) = stack[i];
+            if b & 1 == 0 && o > c {
+                let mut s = result[j].clone();
+                s.push(')');
+                result.push(s);
+                stack[i].3 |= 1;
+                i += 1;
+                stack[i] = (result.len() - 1, o, c + 1, 0);
+                continue;
             }
-            if i != 1 {
-                a.copy_within(l..(o0 - 2), (o0 + 1) << 1);
+            if b & 2 == 0 {
+                let s = &mut result[j];
+                s.push('(');
+                if o + 1 < n {
+                    stack[i].3 |= 2;
+                    i += 1;
+                    stack[i] = (j, o + 1, c, 0);
+                    continue;
+                }
+                for _ in c..n { s.push(')'); }
             }
-            m += (m << 1) - 1;
+            if i == 0 { return result; }
+            i -= 1;
         }
-        a.chunks(l).map( |v| {
-            unsafe { from_utf8_unchecked(v) }.to_owned()
-        } ).collect()
     }
 }
 
