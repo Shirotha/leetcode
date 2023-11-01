@@ -102,3 +102,4 @@ mod combinations;
 mod permutations;
 mod combination_sum;
 mod n_queens_ii;
+mod generate_parentheses;
