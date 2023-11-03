@@ -106,3 +106,4 @@ mod generate_parentheses;
 mod word_search;
 mod sort_list;
 mod merge_k_sorted_lists;
+mod maximum_subarray;
