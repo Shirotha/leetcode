@@ -111,3 +111,4 @@ mod maximum_sum_circular_subarray;
 mod search_insert_position;
 mod search_a_2d_matrix;
 mod find_peak_element;
+mod search_in_rotated_sorted_array;
