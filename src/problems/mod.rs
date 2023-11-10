@@ -117,3 +117,4 @@ mod find_minimum_in_rotated_sorted_array;
 mod median_of_two_sorted_arrays;
 mod kth_largest_element_in_an_array;
 mod ipo;
+mod find_k_pairs_with_smallest_sums;
