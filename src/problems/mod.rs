@@ -126,3 +126,4 @@ mod bitwise_and_of_numbers_range;
 mod palindrome_number;
 mod plus_one;
 mod factorial_trailing_zeros;
+mod sqrtx;
