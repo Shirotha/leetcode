@@ -124,3 +124,4 @@ mod single_number;
 mod single_number_ii;
 mod bitwise_and_of_numbers_range;
 mod palindrome_number;
+mod plus_one;
