@@ -120,3 +120,4 @@ mod find_median_from_data_stream;
 mod add_binary;
 mod reverse_bits;
 mod number_of_1_bits;
+mod single_number;
