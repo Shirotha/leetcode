@@ -127,3 +127,4 @@ mod palindrome_number;
 mod plus_one;
 mod factorial_trailing_zeros;
 mod sqrtx;
+mod powx_n;
