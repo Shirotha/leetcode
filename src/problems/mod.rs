@@ -129,3 +129,4 @@ mod factorial_trailing_zeros;
 mod sqrtx;
 mod powx_n;
 mod points_on_a_line;
+mod climbing_stairs;
