@@ -128,3 +128,4 @@ mod plus_one;
 mod factorial_trailing_zeros;
 mod sqrtx;
 mod powx_n;
+mod points_on_a_line;
