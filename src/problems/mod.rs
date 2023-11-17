@@ -135,3 +135,4 @@ mod word_break;
 mod coin_change;
 mod longest_increasing_subsequence;
 mod triangle;
+mod minimum_path_sum;
