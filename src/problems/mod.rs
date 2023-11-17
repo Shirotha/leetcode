@@ -133,3 +133,4 @@ mod climbing_stairs;
 mod house_robber;
 mod word_break;
 mod coin_change;
+mod longest_increasing_subsequence;
