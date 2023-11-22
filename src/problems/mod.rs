@@ -142,3 +142,4 @@ mod interleaving_string;
 mod edit_distance;
 mod best_time_to_buy_and_sell_stock_iii;
 mod best_time_to_buy_and_sell_stock_iv;
+mod maximal_square;
