@@ -22,22 +22,96 @@
 
 pub struct Solution;
 
-use std::{mem::swap, ptr::copy_nonoverlapping};
+use std::mem::swap;
 
-#[inline] fn parent(i: usize) -> usize { (i - 1) >> 1 }
-#[inline] fn grandparent(i: usize) -> usize { parent(parent(i)) }
-#[inline] fn child1(i: usize) -> usize { (i << 1) + 1 }
-#[inline] fn child2(i: usize) -> usize { (i << 1) + 2 }
-#[inline] fn grandchild1(i: usize) -> usize { child1(child1(i)) }
-#[inline] fn grandchild2(i: usize) -> usize { child2(child1(i)) }
-#[inline] fn grandchild3(i: usize) -> usize { child1(child2(i)) }
-#[inline] fn grandchild4(i: usize) -> usize { child2(child2(i)) }
-#[inline] fn has_parent(i: usize) -> bool { i > 0 }
-#[inline] fn has_grandparent(i: usize) -> bool { i > 2 }
-#[inline] fn is_min_level(i: usize) -> bool { (i + 1).leading_zeros() & 1 == 1 }
+#[inline(always)] fn parent(i: usize) -> usize { (i - 1) >> 1 }
+#[inline(always)] fn grandparent(i: usize) -> usize { parent(parent(i)) }
+#[inline(always)] fn child1(i: usize) -> usize { (i << 1) + 1 }
+#[inline(always)] fn child2(i: usize) -> usize { (i << 1) + 2 }
+#[inline(always)] fn grandchild1(i: usize) -> usize { child1(child1(i)) }
+#[inline(always)] fn grandchild2(i: usize) -> usize { child2(child1(i)) }
+#[inline(always)] fn grandchild3(i: usize) -> usize { child1(child2(i)) }
+#[inline(always)] fn grandchild4(i: usize) -> usize { child2(child2(i)) }
+#[inline(always)] fn has_parent(i: usize) -> bool { i > 0 }
+#[inline(always)] fn has_grandparent(i: usize) -> bool { i > 2 }
+#[inline(always)] fn is_min_level(i: usize) -> bool { (i + 1).leading_zeros() & 1 == 1 }
 
 enum Generation { Same, Parent, Grandparent }
 use Generation::*;
+
+struct Hole<'a> {
+    data: &'a mut [i32],
+    elt: i32,
+    pos: usize,
+}
+impl<'a> Hole<'a> {
+    #[inline] fn new(data: &'a mut [i32], pos: usize) -> Self { let elt = data[pos]; Hole { data, elt, pos } }
+    #[inline] fn move_to(&mut self, index: usize) {
+        self.data[self.pos] = self.data[index];
+        self.pos = index;
+    }
+    #[inline] fn swap_with_parent(&mut self) {
+        swap(&mut self.data[parent(self.pos)], &mut self.elt);
+    }
+    #[inline] fn index_of_best_child_or_grandchild<F>(&self, len: usize, f: F) -> (usize, Generation)
+        where F: Fn(i32, i32) -> bool
+    {
+        let p = self.pos;
+        let (mut pos, mut depth, mut element) = (p, Same, self.elt);
+        let mut check = |i, gen| {
+            if i >= len { return false; }
+            if f(self.data[i], element) { pos = i; depth = gen; element = self.data[i]; }
+            true
+        };
+        let _ = check(child1(p), Parent)
+             && check(child2(p), Parent)
+             && check(grandchild1(p), Grandparent)
+             && check(grandchild2(p), Grandparent)
+             && check(grandchild3(p), Grandparent)
+             && check(grandchild4(p), Grandparent);
+        (pos, depth)
+    }
+    #[inline] fn bubble_up(&mut self) {
+        let p = self.pos;
+        if is_min_level(p) {
+            if has_parent(p) && self.elt > self.data[parent(p)] {
+                self.move_to(parent(p));
+                self.bubble_up_max();
+            } else { self.bubble_up_min(); }
+        } else if has_parent(p) && self.elt < self.data[parent(p)] {
+            self.move_to(parent(p));
+            self.bubble_up_min();
+        } else { self.bubble_up_max(); }
+    }
+    #[inline] fn bubble_up_min(&mut self) {
+        while has_grandparent(self.pos) && self.elt < self.data[grandparent(self.pos)] {
+            self.move_to(grandparent(self.pos));
+        }
+    }
+    #[inline] fn bubble_up_max(&mut self) {
+        while has_grandparent(self.pos) && self.elt > self.data[grandparent(self.pos)] {
+            self.move_to(grandparent(self.pos));
+        }
+    }
+    #[inline] fn trickle_down(&mut self) {
+        let len = self.data.len();
+        let f = if is_min_level(self.pos) { |a, b| a < b } else { |a, b| a > b };
+        loop {
+            let (m, gen) = self.index_of_best_child_or_grandchild(len, f);
+            match gen {
+                Grandparent => {
+                    self.move_to(m);
+                    if f(self.data[parent(self.pos)], self.elt) { self.swap_with_parent(); }
+                },
+                Parent => { self.move_to(m); return; },
+                Same => return,
+            }
+        }
+    }
+}
+impl<'a> Drop for Hole<'a> {
+    fn drop(&mut self) { self.data[self.pos] = self.elt; }
+}
 
 struct MinMaxHeap(Vec<i32>);
 impl MinMaxHeap {
@@ -52,7 +126,7 @@ impl MinMaxHeap {
         let mut x = self.0.pop().unwrap();
         if i < self.0.len() {
             swap(&mut x, &mut self.0[i]);
-            self.trickle_down_max(i);
+            Hole::new(&mut self.0, i).trickle_down();
         }
         Some(x)
     }
@@ -62,93 +136,18 @@ impl MinMaxHeap {
             return None;
         }
         swap(&mut value, &mut self.0[0]);
-        self.trickle_down_min(0);
+        Hole::new(&mut self.0, 0).trickle_down();
         Some(value)
     }
     #[inline] fn insert(&mut self, value: i32) {
         let i = self.0.len();
         self.0.push(value);
-        self.bubble_up(i);
+        Hole::new(&mut self.0, i).bubble_up();
     }
-    #[inline] fn bubble_up(&mut self, i: usize) {
-        let val = self.0[i];
-        let i = if is_min_level(i) {
-                if has_parent(i) && self.0[i] > self.0[parent(i)] {
-                    let i = self.copy(i, parent(i));
-                    self.bubble_up_max(i, val)
-                } else { self.bubble_up_min(i, val) }
-            } else if has_parent(i) && self.0[i] < self.0[parent(i)] {
-                let i = self.copy(i, parent(i));
-                self.bubble_up_min(i, val)
-            } else { self.bubble_up_max(i, val) };
-        self.0[i] = val;
-    }
-    #[inline] fn bubble_up_min(&mut self, mut i: usize, val: i32) -> usize {
-        while has_grandparent(i) && val < self.0[grandparent(i)] {
-            i = self.copy(i, grandparent(i));
-        }
-        i
-    }
-    #[inline] fn bubble_up_max(&mut self, mut i: usize, val: i32) -> usize {
-        while has_grandparent(i) && val > self.0[grandparent(i)] {
-            i = self.copy(i, grandparent(i));
-        }
-        i
-    }
-    #[inline] fn trickle_down_min(&mut self, mut i: usize) {
-        let len = self.0.len();
-        let mut val = self.0[i];
-        loop {
-            let (m, gen) = self.index_of_best_child_or_grandchild(i, val, len, |a, b| a < b );
-            match gen {
-                Grandparent => {
-                    i = self.copy(i, m);
-                    let p = parent(i);
-                    if self.0[i] > self.0[p] { swap(&mut val, &mut self.0[p]); }
-                },
-                Parent => i = self.copy(i, m),
-                Same => break,
-            }
-        }
-        self.0[i] = val;
-    }
-    #[inline] fn trickle_down_max(&mut self, mut i: usize) {
-        let len = self.0.len();
-        let mut val = self.0[i];
-        loop {
-            let (m, gen) = self.index_of_best_child_or_grandchild(i, val, len, |a, b| a > b );
-            match gen {
-                Grandparent => {
-                    i = self.copy(i, m);
-                    let p = parent(i);
-                    if self.0[i] > self.0[p] { swap(&mut val, &mut self.0[p]); }
-                },
-                Parent => i = self.copy(i, m),
-                Same => break,
-            }
-        }
-        self.0[i] = val;
-    }
-    #[inline] fn index_of_best_child_or_grandchild<F: Fn(i32, i32) -> bool>(&self, i: usize, mut val: i32, len: usize, f: F) -> (usize, Generation) {
-        let mut pos = i;
-        let mut gen = Same;
-        let mut check = |i, g| {
-            if i >= len { return false; }
-            if f(self.0[i], val) { pos = i; gen = g; val = self.0[i]; }
-            true
-        };
-        let _ = check(child1(i), Parent)
-             && check(child2(i), Parent)
-             && check(grandchild1(i), Grandparent)
-             && check(grandchild2(i), Grandparent)
-             && check(grandchild3(i), Grandparent)
-             && check(grandchild4(i), Grandparent);
-        (pos, gen)
-    }
-    #[inline] fn copy(&mut self, src: usize, dst: usize) -> usize {
-        unsafe { copy_nonoverlapping(&self.0[dst], &mut self.0[src], 1); }
-        dst
-    }
+}
+impl IntoIterator for MinMaxHeap {
+    type Item = i32; type IntoIter = std::vec::IntoIter<Self::Item>;
+    #[inline] fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
 }
 
 impl Solution {
@@ -162,7 +161,6 @@ impl Solution {
             let c = capital[i];
             while c > w {
                 if let Some(p) = heap.pop_max() {
-                    assert!(heap.0.iter().all( |x| x <= &p ));
                     w += p; k -= 1;
                     if k == 0 { return w; }
                 } else { return w; }
@@ -171,8 +169,7 @@ impl Solution {
             if heap.len() < k { heap.insert(p); }
             else if heap.peek_min().unwrap() < &p { heap.replace_min(p); }
         }
-        while k > 0 { if let Some(p) = heap.pop_max() { w += p; k -= 1; } else { break; } }
-        w
+        w + heap.into_iter().sum::<i32>()
     }
 }
 
@@ -239,5 +236,17 @@ mod test {
         let c = Solution::find_maximized_capital(k, w, profits, capital);
 
         assert_eq!(c, 120730);
+    }
+
+    #[test]
+    fn example5() {
+        let k = 95;
+        let w = 469;
+        let profits = vec![329,95,478,187,292,425,139,47,254,284,268,513,131,415,125,23,150,15,45,504,177,5,378,445,442,345,101,499,83,200,5,310,209,321,288,468,319,126,481,323,43,272,61,262,410,463,414,275,475,16,222,456,222,422,163,286,58,428,509,119,255,17,403,385,230,116,11,421,245,244,80,94,225,428,406,37,225,517,164,399,291,360,207,68,487,23,166,283,322,124,457,81,29,104,233,172,519,296,329,125];
+        let capital = vec![497,270,499,274,138,224,425,259,357,276,493,428,492,246,518,252,160,36,76,246,89,155,249,153,156,485,502,327,93,365,391,110,155,112,104,416,356,350,524,9,378,317,305,203,320,388,273,291,143,169,348,493,299,128,235,214,371,258,206,505,299,289,257,228,271,482,427,78,189,155,108,292,521,178,442,524,349,229,228,19,230,217,14,51,319,79,434,455,2,515,511,136,499,9,473,170,472,394,375,101];
+
+        let c = Solution::find_maximized_capital(k, w, profits, capital);
+
+        assert_eq!(c, 25815);
     }
 }
