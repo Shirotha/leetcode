@@ -15,28 +15,35 @@
 
 pub struct Solution;
 
-use std::collections::BinaryHeap;
+use std::collections::{BinaryHeap, HashSet};
 
 #[derive(Eq)]
-struct Item(i32, i32, i32);
-impl Item { fn to_vec(&self) -> Vec<i32> { vec![self.0, self.1] } }
+struct Item(usize, usize, i32);
 impl Ord for Item { fn cmp(&self, other: &Self) -> std::cmp::Ordering { other.2.cmp(&self.2) } }
-impl PartialOrd for Item { fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> { Some(self.cmp(&other)) } }
+impl PartialOrd for Item { fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> { Some(self.cmp(other)) } }
 impl PartialEq for Item { fn eq(&self, other: &Self) -> bool { self.2 == other.2 } }
+
+#[inline(always)] fn hash(i: usize, j: usize) -> usize { i | (j << 16) }
 
 impl Solution {
     pub fn k_smallest_pairs(nums1: Vec<i32>, nums2: Vec<i32>, mut k: i32) -> Vec<Vec<i32>> {
-        let n = k as usize;
-        let mut result = Vec::with_capacity(n);       
-        let mut heap = BinaryHeap::with_capacity(n);
-        let mut worst = i32::MIN;
-        for a in nums1 { for &b in nums2.iter() {
-            let s = a + b;
-            if k == 0 { if s > worst { continue; } }
-            else { k -= 1; if s > worst { worst = s; } }
-            heap.push(Item(a, b, s));
-        } }
-        for _ in 0..n { if let Some(x) = heap.pop() { result.push(x.to_vec()); } else { break; } }
+        let (n, a, b) = (k as usize, nums1.len() - 1, nums2.len() - 1);
+        let mut result = Vec::with_capacity(n);
+        let mut heap = BinaryHeap::new();
+        let mut set = HashSet::with_capacity(n);
+        heap.push(Item(0, 0, nums1[0] + nums2[0]));
+        while let Some(Item(i, j, _)) = heap.pop() {
+            result.push(vec![nums1[i], nums2[j]]); k -= 1;
+            if k == 0 { break; }
+            if i != a {
+                let l = hash(i + 1, j);
+                if !set.contains(&l) { set.insert(l); heap.push(Item(i + 1, j, nums1[i + 1] + nums2[j])); }
+            }
+            if j != b {
+                let r = hash(i, j + 1);
+                if !set.contains(&r) { set.insert(r); heap.push(Item(i, j + 1, nums1[i] + nums2[j + 1])); }
+            }
+        }
         result
     }
 }
@@ -45,7 +52,9 @@ impl Solution {
 mod test {
     use super::*;
 
-    fn judge(ps: &[Vec<i32>], xs: &[[i32; 2]]) {
+    fn judge(mut ps:Vec<Vec<i32>>, xs: &[[i32; 2]]) {
+        assert_eq!(ps.len(), xs.len());
+        ps.sort_unstable_by_key( |ab| ab[0] + ab[1] );
         for (p, x) in ps.iter().zip(xs.iter()) {
             assert_eq!(p[0].min(p[1]), x[0]);
             assert_eq!(p[0].max(p[1]), x[1]);
@@ -65,7 +74,7 @@ mod test {
 
         let p = Solution::k_smallest_pairs(nums1, nums2, k);
 
-        judge(&p, &[[1,2],[1,4],[1,6]]);
+        judge(p, &[[1,2],[1,4],[1,6]]);
     }
 
     /*
@@ -81,7 +90,7 @@ mod test {
 
         let p = Solution::k_smallest_pairs(nums1, nums2, k);
 
-        judge(&p, &[[1,1],[1,1]]);
+        judge(p, &[[1,1],[1,1]]);
     }
     /*
         Input: nums1 = [1,2], nums2 = [3], k = 3
@@ -97,6 +106,6 @@ mod test {
 
         let p = Solution::k_smallest_pairs(nums1, nums2, k);
 
-        judge(&p, &[[1,3],[2,3]]);
+        judge(p, &[[1,3],[2,3]]);
     }
 }
