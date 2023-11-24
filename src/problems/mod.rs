@@ -143,3 +143,5 @@ mod edit_distance;
 mod best_time_to_buy_and_sell_stock_iii;
 mod best_time_to_buy_and_sell_stock_iv;
 mod maximal_square;
+mod ipo;
+mod find_k_pairs_with_smallest_sums;
