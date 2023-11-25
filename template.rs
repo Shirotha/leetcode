@@ -2,6 +2,8 @@
 
  */
 
+pub struct Solution;
+
 
 
 #[cfg(test)]

@@ -137,6 +137,20 @@ function migrate {
     register "$1" "$2"
 }
 
+function copy_to_alternatives {
+    if [[ $# -le 2 ]]; then
+        argument_error "$0" "more than 2" $#
+    fi
+    base=./src/problems/$1
+    original=$base/$2.rs
+    check_file "$original"
+    for alt in "${@:3}"; do
+        target=$base/$alt.rs
+        check_not_file "$target"
+        cp "$original" "$target"
+    done
+}
+
 command=$1
 shift
 check_reserved_batch "$@"
@@ -146,8 +160,10 @@ elif [ "$command" = "migrate" ]; then
     group=$1
     shift
     migrate "$group" "$1"
+    original=$1
     shift
-    create "$group" "$@"
+    copy_to_alternatives "$group" "$original" "$@"
+
 else
     echo "unknown command $1" >&2
 fi
