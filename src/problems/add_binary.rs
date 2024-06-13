@@ -10,7 +10,7 @@
 
 pub struct Solution;
 
-use std::{iter::repeat, collections::VecDeque, mem::ManuallyDrop};
+use std::iter::repeat;
 
 impl Solution {
     pub fn add_binary(a: String, b: String) -> String {
@@ -18,20 +18,20 @@ impl Solution {
         let (mut n, a, b) = if a.len() >= b.len() {
             (a.len(), a, b)
         } else { (b.len(), b, a) }; 
-        let mut digits = ManuallyDrop::new(VecDeque::with_capacity(n + 1));
+        let mut digits = String::with_capacity(n + 1);
         let mut carry = 0;
         for (&a, &b) in a.as_bytes().iter().rev()
             .zip(b.as_bytes().iter().rev().chain(repeat(&ZERO))) 
         {
             let sum = (a - ZERO) + (b - ZERO) + carry;
-            digits.push_front(ZERO + (sum & 1));
+            digits.push((ZERO + (sum & 1)) as char);
             carry = (sum & 2) >> 1; n -= 1;
         }
-        if carry != 0 { digits.push_front(ZERO + 1); }
+        if carry != 0 { digits.push((ZERO + 1) as char); }
         unsafe {
-            let buf = digits.make_contiguous().as_mut_ptr();
-            String::from_raw_parts(buf, digits.len(), digits.capacity())
+            digits.as_mut_vec().reverse();
         }
+        digits
     }
 }
 
